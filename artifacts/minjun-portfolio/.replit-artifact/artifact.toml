@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/minjun-portfolio/"
+title = "김민준 포트폴리오"
+description = "김민준님의 실제 학습 경험, 프론트엔드 프로젝트, 보유 역량을 채용 담당자와 개발팀 리더에게 소개하는 반응형 포트폴리오 웹사이트입니다."
+version = "1.0.0"
+id = "artifacts/minjun-portfolio"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/minjun-portfolio/" ]
+localPort = 21230
+
+[services.development]
+run = "pnpm --filter @workspace/minjun-portfolio run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/minjun-portfolio", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/minjun-portfolio/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21230"
+BASE_PATH = "/minjun-portfolio/"
