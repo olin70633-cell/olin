@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: news
+    description: Korean-language news
 paths:
   /healthz:
     get:
@@ -24,6 +26,24 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /news/korean:
+    get:
+      operationId: getKoreanNews
+      tags: [news]
+      summary: Get recent Korean-language technology headlines
+      responses:
+        "200":
+          description: Recent Korean news headlines
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KoreanNewsResponse"
+        "502":
+          description: News provider unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +53,40 @@ components:
           type: string
       required:
         - status
+    KoreanNewsStory:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        source:
+          type: string
+        publishedAt:
+          type: string
+          format: date-time
+        url:
+          type: string
+      required:
+        - id
+        - title
+        - source
+        - publishedAt
+        - url
+    KoreanNewsResponse:
+      type: object
+      properties:
+        stories:
+          type: array
+          items:
+            $ref: "#/components/schemas/KoreanNewsStory"
+      required:
+        - stories
+    ApiError:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
 

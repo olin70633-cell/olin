@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useGetKoreanNews } from '@workspace/api-client-react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
@@ -37,14 +38,6 @@ type WeatherData = {
   low?: number;
   code: number;
   wind?: number;
-};
-
-type Story = {
-  id: number;
-  title: string;
-  by: string;
-  time: number;
-  url?: string;
 };
 
 const GOOGLE_SERVICES = [
@@ -91,20 +84,11 @@ function WeatherIcon({ code }: { code: number }) {
   return <CloudSun className="weather-icon" aria-hidden="true" />;
 }
 
-function storyAge(timestamp: number) {
-  const elapsed = Math.max(0, Math.floor(Date.now() / 1000 - timestamp));
+function storyAge(publishedAt: string) {
+  const elapsed = Math.max(0, Math.floor((Date.now() - Date.parse(publishedAt)) / 1000));
   if (elapsed < 3600) return `${Math.max(1, Math.floor(elapsed / 60))}분 전`;
   if (elapsed < 86400) return `${Math.floor(elapsed / 3600)}시간 전`;
   return `${Math.floor(elapsed / 86400)}일 전`;
-}
-
-function storySource(url?: string) {
-  if (!url) return 'Hacker News';
-  try {
-    return new URL(url).hostname.replace(/^www\./, '');
-  } catch {
-    return 'Hacker News';
-  }
 }
 
 function googleSearchUrl(query: string, lucky = false) {
@@ -119,9 +103,10 @@ function Home() {
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [weatherLoading, setWeatherLoading] = useState(true);
   const [weatherError, setWeatherError] = useState('');
-  const [stories, setStories] = useState<Story[]>([]);
-  const [newsLoading, setNewsLoading] = useState(true);
-  const [newsError, setNewsError] = useState('');
+  const newsQuery = useGetKoreanNews();
+  const stories = newsQuery.data?.stories ?? [];
+  const newsLoading = newsQuery.isLoading;
+  const newsError = newsQuery.isError && stories.length === 0;
   const [appsOpen, setAppsOpen] = useState(false);
   const [voiceMessage, setVoiceMessage] = useState('');
   const [voiceError, setVoiceError] = useState(false);
@@ -199,31 +184,8 @@ function Home() {
     }
   };
 
-  const loadNews = async () => {
-    setNewsLoading(true);
-    setNewsError('');
-    try {
-      const response = await fetch('https://hacker-news.firebaseio.com/v0/newstories.json');
-      if (!response.ok) throw new Error('뉴스를 가져오지 못했어요.');
-      const ids: number[] = await response.json();
-      const items = await Promise.all(ids.slice(0, 14).map(async (id) => {
-        const itemResponse = await fetch(`https://hacker-news.firebaseio.com/v0/item/${id}.json`);
-        if (!itemResponse.ok) return null;
-        return itemResponse.json() as Promise<Story>;
-      }));
-      const available = items.filter((item): item is Story => Boolean(item?.title && item.by && item.time));
-      setStories(available.slice(0, 5));
-      if (!available.length) setNewsError('새로운 헤드라인이 아직 없어요.');
-    } catch {
-      setNewsError('헤드라인을 불러오지 못했어요.');
-    } finally {
-      setNewsLoading(false);
-    }
-  };
-
   useEffect(() => {
     void loadWeather();
-    void loadNews();
   }, []);
 
   const hour = Number(new Intl.DateTimeFormat('en-US', {
@@ -397,7 +359,7 @@ function Home() {
           <article className="widget news-card" aria-label="최신 기술 소식">
             <div className="news-heading">
               <h2 className="news-title">최신 기술 소식</h2>
-              <span className="news-live"><span className="live-dot" /> Hacker News</span>
+              <span className="news-live"><span className="live-dot" /> 한국어 기사</span>
             </div>
             {newsLoading ? (
               <div role="status" aria-label="헤드라인 불러오는 중">
@@ -405,8 +367,8 @@ function Home() {
               </div>
             ) : newsError ? (
               <div className="news-status" role="status">
-                <span>{newsError}</span>
-                <button className="retry-button" type="button" onClick={() => void loadNews()} data-testid="button-retry-news">다시 시도</button>
+                <span>한국어 헤드라인을 불러오지 못했어요.</span>
+                <button className="retry-button" type="button" onClick={() => void newsQuery.refetch()} data-testid="button-retry-news">다시 시도</button>
               </div>
             ) : stories.length === 0 ? (
               <div className="news-status">표시할 헤드라인이 없어요.</div>
@@ -416,9 +378,8 @@ function Home() {
                 <span className="news-copy">
                   <span className="headline">{story.title}</span>
                   <span className="news-meta">
-                    <span>{storySource(story.url)}</span><span className="meta-dot">·</span>
-                    <span>{story.by}</span><span className="meta-dot">·</span>
-                    <time dateTime={new Date(story.time * 1000).toISOString()}>{storyAge(story.time)}</time>
+                  <span>{story.source}</span><span className="meta-dot">·</span>
+                  <time dateTime={story.publishedAt}>{storyAge(story.publishedAt)}</time>
                   </span>
                 </span>
                 <ArrowUpRight className="news-external" size={15} aria-hidden="true" />
