@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Daily Startpage"
+description = "A personal Korean-language start page with Google-style search, live time and greeting, current weather, and recent technology news."
+version = "1.0.0"
+id = "artifacts/daily-startpage"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 20037
+
+[services.development]
+run = "pnpm --filter @workspace/daily-startpage run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/daily-startpage", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/daily-startpage/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "20037"
+BASE_PATH = "/"
