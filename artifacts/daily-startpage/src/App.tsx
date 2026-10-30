@@ -238,7 +238,7 @@ function Home() {
 
   const submitSearch = (lucky = false) => {
     if (!query.trim()) return;
-    window.location.assign(googleSearchUrl(query.trim(), lucky));
+    window.open(googleSearchUrl(query.trim(), lucky), '_blank', 'noopener,noreferrer');
   };
   const refreshWeather = () => {
     if (selectedLocation.current) void loadWeather(selectedLocation.current);
@@ -273,8 +273,7 @@ function Home() {
     recognition.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
       setQuery(transcript);
-      setVoiceMessage('');
-      window.location.assign(googleSearchUrl(transcript));
+      setVoiceMessage('음성 입력을 완료했어요. 검색 버튼을 눌러주세요.');
     };
     recognition.onerror = () => {
       setVoiceError(true);
